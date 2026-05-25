@@ -13,8 +13,29 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 
     <style>
-        body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Inter', sans-serif; }
-        #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
+        html, body { 
+            margin: 0; 
+            padding: 0; 
+            width: 100%; 
+            height: 100%; 
+            overflow: hidden; 
+            background-color: #050505; 
+            font-family: 'Inter', sans-serif; 
+        }
+        
+        #canvas-container { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            z-index: 1; 
+        }
+
+        canvas { 
+            display: block; 
+            outline: none; 
+        }
         
         /* UI Layer */
         #ui-layer { position: absolute; z-index: 10; width: 100%; height: 100%; pointer-events: none; }
@@ -31,6 +52,14 @@
             transition: opacity 0.2s;
             user-select: none;
             pointer-events: none;
+        }
+
+        /* Subtle Axis Labels */
+        .label-axis {
+            color: #64748b;
+            font-size: 1rem;
+            font-weight: 600;
+            text-shadow: 0 0 5px rgba(0,0,0,1);
         }
 
         /* Glassmorphism Panels */
@@ -159,12 +188,18 @@
 
     <!-- 3D Spatial Labels -->
     <div id="labels-container" class="absolute inset-0 pointer-events-none z-0">
+        <!-- State Labels -->
         <div id="lbl-0" class="label-3d">|0⟩</div>
         <div id="lbl-1" class="label-3d">|1⟩</div>
         <div id="lbl-plus" class="label-3d">|+⟩</div>
         <div id="lbl-minus" class="label-3d">|-⟩</div>
         <div id="lbl-i" class="label-3d text-emerald-400">|i⟩</div>
         <div id="lbl-minusi" class="label-3d text-emerald-400">|-i⟩</div>
+
+        <!-- Coordinate Axis Labels -->
+        <div id="lbl-axis-x" class="label-3d label-axis">X</div>
+        <div id="lbl-axis-y" class="label-3d label-axis">Y</div>
+        <div id="lbl-axis-z" class="label-3d label-axis">Z</div>
     </div>
 
     <script>
@@ -173,6 +208,7 @@
         let scene, camera, renderer, controls;
         let arrowGroup, vectorTip;
         let pathLine, pathGeometry;
+        let rotationAxisLine; // Represents the unitary axis of rotation
         
         // Math / Quantum State Variables
         let stateQuat; 
@@ -206,12 +242,14 @@
             scene.fog = new THREE.FogExp2(0x050505, 0.02);
 
             // Camera Setup
-            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
             camera.position.set(10, 8, 12);
             
             // Renderer Setup
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setSize(width, height);
             renderer.setPixelRatio(window.devicePixelRatio);
             container.appendChild(renderer.domElement);
 
@@ -262,7 +300,7 @@
             scene.add(createCircle('y')); // XZ plane (equator)
             scene.add(createCircle('z')); // XY plane
 
-            // Axes
+            // Coordinate Axes (Fixed structural lines)
             const buildAxis = (vec, colorHex) => {
                 const mat = new THREE.LineBasicMaterial({ color: colorHex, opacity: 0.5, transparent: true });
                 const geo = new THREE.BufferGeometry().setFromPoints([
@@ -274,6 +312,22 @@
             buildAxis(new THREE.Vector3(1, 0, 0), 0x22aa44); // Three X (Bloch Y)
             buildAxis(new THREE.Vector3(0, 1, 0), 0x4444aa); // Three Y (Bloch Z)
             buildAxis(new THREE.Vector3(0, 0, 1), 0xaa2244); // Three Z (Bloch X)
+
+            // Dynamic Unitary Rotation Axis Indicator (Magenta Dashed Line)
+            const rotAxisMat = new THREE.LineDashedMaterial({
+                color: 0xff00ff,
+                linewidth: 2,
+                dashSize: 0.4,
+                gapSize: 0.2,
+                transparent: true,
+                opacity: 0.9
+            });
+            const rotAxisGeo = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,0)
+            ]);
+            rotationAxisLine = new THREE.Line(rotAxisGeo, rotAxisMat);
+            rotationAxisLine.visible = false;
+            scene.add(rotationAxisLine);
         }
 
         function buildQuantumStateVector() {
@@ -318,36 +372,58 @@
 
         window.applyGate = function(gateType, angleDeg = null) {
             let qGate = new THREE.Quaternion();
+            let rotAxis = new THREE.Vector3();
             const sq2 = 1 / Math.SQRT2;
             let displayStr = gateType;
 
-            // Mapping: Three X = Bloch Y | Three Y = Bloch Z | Three Z = Bloch X
+            // Mapping: Three Z = Bloch X | Three X = Bloch Y | Three Y = Bloch Z
 
             switch(gateType) {
                 // Fixed Gates
-                case 'X': qGate.setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI); break;
-                case 'Y': qGate.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI); break;
-                case 'Z': qGate.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI); break;
-                case 'H': qGate.setFromAxisAngle(new THREE.Vector3(0, sq2, sq2), Math.PI); break;
-                case 'S': qGate.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2); break;
-                case 'T': qGate.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 4); break;
+                case 'X': 
+                    rotAxis.set(0, 0, 1);
+                    qGate.setFromAxisAngle(rotAxis, Math.PI); 
+                    break;
+                case 'Y': 
+                    rotAxis.set(1, 0, 0);
+                    qGate.setFromAxisAngle(rotAxis, Math.PI); 
+                    break;
+                case 'Z': 
+                    rotAxis.set(0, 1, 0);
+                    qGate.setFromAxisAngle(rotAxis, Math.PI); 
+                    break;
+                case 'H': 
+                    rotAxis.set(0, sq2, sq2); // Rotates around (X+Z)/sqrt(2)
+                    qGate.setFromAxisAngle(rotAxis, Math.PI); 
+                    break;
+                case 'S': 
+                    rotAxis.set(0, 1, 0);
+                    qGate.setFromAxisAngle(rotAxis, Math.PI / 2); 
+                    break;
+                case 'T': 
+                    rotAxis.set(0, 1, 0);
+                    qGate.setFromAxisAngle(rotAxis, Math.PI / 4); 
+                    break;
                 
                 // Parameterized Rotations
                 case 'Rx': 
-                    qGate.setFromAxisAngle(new THREE.Vector3(0, 0, 1), angleDeg * Math.PI / 180); 
+                    rotAxis.set(0, 0, 1);
+                    qGate.setFromAxisAngle(rotAxis, angleDeg * Math.PI / 180); 
                     displayStr = `Rx(${angleDeg}°)`;
                     break;
                 case 'Ry': 
-                    qGate.setFromAxisAngle(new THREE.Vector3(1, 0, 0), angleDeg * Math.PI / 180); 
+                    rotAxis.set(1, 0, 0);
+                    qGate.setFromAxisAngle(rotAxis, angleDeg * Math.PI / 180); 
                     displayStr = `Ry(${angleDeg}°)`;
                     break;
                 case 'Rz': 
-                    qGate.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angleDeg * Math.PI / 180); 
+                    rotAxis.set(0, 1, 0);
+                    qGate.setFromAxisAngle(rotAxis, angleDeg * Math.PI / 180); 
                     displayStr = `Rz(${angleDeg}°)`;
                     break;
             }
 
-            animationQueue.push({ type: displayStr, quaternion: qGate });
+            animationQueue.push({ type: displayStr, quaternion: qGate, axis: rotAxis });
             addToHistory(displayStr);
         }
 
@@ -360,6 +436,7 @@
             renderHistory();
             updateStateReadout();
             isAnimating = false;
+            rotationAxisLine.visible = false;
         }
 
         function addToHistory(gateStr) {
@@ -421,10 +498,21 @@
 
                 let startV = new THREE.Vector3(0, RADIUS, 0).applyQuaternion(stateQuat);
                 appendToPath(startV);
+
+                // Show and align the Unitary Rotation Axis indicator
+                if (nextAnim.axis) {
+                    const lineExt = RADIUS * 1.35;
+                    rotationAxisLine.geometry.setFromPoints([
+                        nextAnim.axis.clone().multiplyScalar(-lineExt),
+                        nextAnim.axis.clone().multiplyScalar(lineExt)
+                    ]);
+                    rotationAxisLine.computeLineDistances(); // Required for dashed lines
+                    rotationAxisLine.visible = true;
+                }
             }
 
             if (isAnimating) {
-                animProgress += 0.015; 
+                animProgress += 0.012; // Slightly slower to show off rotation axis
                 
                 let done = false;
                 if (animProgress >= 1.0) {
@@ -445,7 +533,10 @@
 
                 updateStateReadout();
 
-                if (done) isAnimating = false;
+                if (done) {
+                    isAnimating = false;
+                    rotationAxisLine.visible = false; // Hide axis when done
+                }
             }
 
             controls.update();
@@ -494,15 +585,26 @@
 
         function updateLabels() {
             const offset = RADIUS * 1.15;
+            const axisOffset = RADIUS * 1.25;
             
             const positions = {
+                // Quantum States
                 'lbl-0': new THREE.Vector3(0, offset, 0),        
                 'lbl-1': new THREE.Vector3(0, -offset, 0),       
                 'lbl-plus': new THREE.Vector3(0, 0, offset),     
                 'lbl-minus': new THREE.Vector3(0, 0, -offset),   
                 'lbl-i': new THREE.Vector3(offset, 0, 0),        
-                'lbl-minusi': new THREE.Vector3(-offset, 0, 0)   
+                'lbl-minusi': new THREE.Vector3(-offset, 0, 0),
+
+                // Coordinate Axes (Slightly offset from states to prevent overlap)
+                'lbl-axis-x': new THREE.Vector3(0.3, 0, axisOffset), // Bloch X (Three Z)
+                'lbl-axis-y': new THREE.Vector3(axisOffset, 0.3, 0), // Bloch Y (Three X)
+                'lbl-axis-z': new THREE.Vector3(0.3, axisOffset, 0)  // Bloch Z (Three Y)
             };
+            
+            const container = document.getElementById('canvas-container');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
 
             for (let id in positions) {
                 let vec = positions[id].clone();
@@ -513,8 +615,8 @@
                     el.style.opacity = '0';
                 } else {
                     el.style.opacity = '1';
-                    let x = (vec.x * 0.5 + 0.5) * window.innerWidth;
-                    let y = -(vec.y * 0.5 - 0.5) * window.innerHeight;
+                    let x = (vec.x * 0.5 + 0.5) * width;
+                    let y = -(vec.y * 0.5 - 0.5) * height;
                     el.style.left = `${x}px`;
                     el.style.top = `${y}px`;
                 }
@@ -522,13 +624,16 @@
         }
 
         function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
+            const container = document.getElementById('canvas-container');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            
+            camera.aspect = width / height;
             camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setSize(width, height);
+            
+            updateLabels(); 
         }
     </script>
 </body>
 </html>
-
-
-```
