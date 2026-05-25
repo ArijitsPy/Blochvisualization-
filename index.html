@@ -7,6 +7,11 @@
     
     <!-- Tailwind CSS for UI -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class', // Enables class-based dark mode
+        }
+    </script>
     
     <!-- Three.js and OrbitControls -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
@@ -19,8 +24,20 @@
             width: 100%; 
             height: 100%; 
             overflow: hidden; 
-            background-color: #050505; 
             font-family: 'Inter', sans-serif; 
+            transition: background 0.4s ease, color 0.4s ease;
+        }
+
+        /* Light Mode Body */
+        body {
+            background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 50%, #f1f5f9 100%);
+            color: #0f172a;
+        }
+
+        /* Dark Mode Body */
+        body.dark {
+            background: #050505;
+            color: #ffffff;
         }
         
         #canvas-container { 
@@ -44,110 +61,137 @@
         /* 3D Labels */
         .label-3d {
             position: absolute;
-            color: white;
-            font-weight: bold;
+            font-weight: 800;
             font-size: 1.25rem;
-            text-shadow: 0 0 10px rgba(0, 255, 255, 0.8), 0 0 20px rgba(0, 255, 255, 0.4);
             transform: translate(-50%, -50%);
-            transition: opacity 0.2s;
+            transition: opacity 0.2s, color 0.4s, text-shadow 0.4s;
             user-select: none;
             pointer-events: none;
         }
 
-        /* Subtle Axis Labels */
-        .label-axis {
+        body:not(.dark) .label-3d {
+            color: #0f172a; 
+            text-shadow: 0 0 10px rgba(255, 255, 255, 1), 0 0 20px rgba(255, 255, 255, 0.8), 0 0 5px rgba(255, 255, 255, 1);
+        }
+        body.dark .label-3d {
+            color: #ffffff;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.8), 0 0 20px rgba(0, 255, 255, 0.4);
+        }
+
+        .label-axis { font-size: 1.1rem; font-weight: 700; }
+        body:not(.dark) .label-axis {
+            color: #475569;
+            text-shadow: 0 0 8px rgba(255,255,255,1);
+        }
+        body.dark .label-axis {
             color: #64748b;
-            font-size: 1rem;
-            font-weight: 600;
             text-shadow: 0 0 5px rgba(0,0,0,1);
         }
 
         /* Glassmorphism Panels */
         .glass-panel {
+            transition: all 0.4s ease;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+        body:not(.dark) .glass-panel {
+            background: rgba(255, 255, 255, 0.55);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05), inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+        }
+        body.dark .glass-panel {
             background: rgba(15, 23, 42, 0.6);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
         }
 
         /* Gate Buttons */
         .gate-btn {
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-            border: 1px solid rgba(255,255,255,0.2);
-            color: #38bdf8;
-            font-weight: 600;
-            width: 3.5rem;
-            height: 3.5rem;
+            width: 3.5rem; height: 3.5rem;
             border-radius: 0.75rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-            transition: all 0.2s;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.25rem; font-weight: 700;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .gate-btn:hover {
+        
+        /* Gate Buttons - Light Theme */
+        body:not(.dark) .gate-btn {
+            background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(241,245,249,0.7) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+        body:not(.dark) .gate-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 0 15px rgba(56, 189, 248, 0.5);
-            border-color: #38bdf8;
-            color: white;
+            background: #ffffff;
             cursor: pointer;
         }
-        .gate-btn:active { transform: translateY(1px); }
-        
-        /* Parametric Inputs */
-        input[type=number]::-webkit-inner-spin-button, 
-        input[type=number]::-webkit-outer-spin-button { 
-            -webkit-appearance: none; 
-            margin: 0; 
+
+        /* Gate Buttons - Dark Theme */
+        body.dark .gate-btn {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
         }
+        body.dark .gate-btn:hover {
+            transform: translateY(-2px);
+            color: #ffffff !important;
+            cursor: pointer;
+        }
+        .gate-btn:active { transform: translateY(1px) !important; }
+        
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     </style>
 </head>
-<body class="text-white selection:bg-cyan-900">
+<body class="selection:bg-sky-200 selection:text-sky-900 dark:selection:bg-cyan-900 dark:selection:text-white">
 
     <!-- 3D Canvas -->
     <div id="canvas-container"></div>
+
+    <!-- Theme Toggle Button -->
+    <button onclick="toggleTheme()" id="theme-btn" class="absolute top-6 right-6 z-20 w-12 h-12 rounded-full glass-panel flex items-center justify-center text-2xl interactive hover:scale-105 transition-transform shadow-lg" title="Toggle Theme">
+        🌙
+    </button>
 
     <!-- UI Overlay -->
     <div id="ui-layer" class="flex flex-col justify-between p-6">
         
         <!-- Top Section: Math Readout & Title -->
-        <div class="flex justify-between items-start w-full">
+        <div class="flex justify-between items-start w-full pr-20">
             <div class="glass-panel rounded-2xl p-6 w-80 interactive">
-                <h1 class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 mb-4">
+                <h1 class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500 dark:from-cyan-400 dark:to-blue-500 mb-4 drop-shadow-sm">
                     Quantum Bloch Sphere
                 </h1>
                 
                 <div class="space-y-3 font-mono text-sm">
-                    <div class="bg-black/40 p-3 rounded-lg border border-white/5">
-                        <div class="text-gray-400 text-xs mb-1">State Vector |ψ⟩</div>
-                        <div id="readout-psi" class="text-cyan-300 font-semibold tracking-wide">1.000 |0⟩ + 0.000 |1⟩</div>
+                    <div class="bg-white/60 dark:bg-black/40 p-3 rounded-xl border border-white dark:border-white/5 shadow-sm transition-colors duration-300">
+                        <div class="text-slate-500 dark:text-gray-400 text-xs mb-1 font-semibold uppercase tracking-wider">State Vector |ψ⟩</div>
+                        <div id="readout-psi" class="text-blue-700 dark:text-cyan-300 font-bold tracking-wide">1.000 |0⟩ + 0.000 |1⟩</div>
                     </div>
                     
                     <div class="grid grid-cols-2 gap-2">
-                        <div class="bg-black/40 p-2 rounded-lg border border-white/5">
-                            <div class="text-gray-400 text-xs">α (Amplitude 0)</div>
-                            <div id="readout-alpha">1.000</div>
+                        <div class="bg-white/60 dark:bg-black/40 p-2 rounded-xl border border-white dark:border-white/5 shadow-sm transition-colors duration-300">
+                            <div class="text-slate-500 dark:text-gray-400 text-xs font-semibold">α (Amplitude 0)</div>
+                            <div id="readout-alpha" class="text-slate-700 dark:text-white font-medium">1.000</div>
                         </div>
-                        <div class="bg-black/40 p-2 rounded-lg border border-white/5">
-                            <div class="text-gray-400 text-xs">β (Amplitude 1)</div>
-                            <div id="readout-beta">0.000</div>
+                        <div class="bg-white/60 dark:bg-black/40 p-2 rounded-xl border border-white dark:border-white/5 shadow-sm transition-colors duration-300">
+                            <div class="text-slate-500 dark:text-gray-400 text-xs font-semibold">β (Amplitude 1)</div>
+                            <div id="readout-beta" class="text-slate-700 dark:text-white font-medium">0.000</div>
                         </div>
                     </div>
 
-                    <div class="flex justify-between bg-black/40 p-2 rounded-lg border border-white/5 text-gray-300">
-                        <div>θ: <span id="readout-theta" class="text-white">0.0°</span></div>
-                        <div>φ: <span id="readout-phi" class="text-white">0.0°</span></div>
+                    <div class="flex justify-between bg-white/60 dark:bg-black/40 p-2 rounded-xl border border-white dark:border-white/5 shadow-sm text-slate-600 dark:text-gray-300 font-medium transition-colors duration-300">
+                        <div>θ: <span id="readout-theta" class="text-slate-900 dark:text-white font-bold">0.0°</span></div>
+                        <div>φ: <span id="readout-phi" class="text-slate-900 dark:text-white font-bold">0.0°</span></div>
                     </div>
                 </div>
             </div>
 
             <!-- Gate History -->
-            <div class="glass-panel rounded-xl p-4 interactive max-w-sm">
-                <div class="text-gray-400 text-xs mb-2 uppercase tracking-wider font-semibold">Circuit History</div>
-                <div id="circuit-history" class="flex flex-wrap gap-2 text-sm font-mono">
-                    <span class="text-gray-500 italic">No gates applied</span>
+            <div class="glass-panel rounded-xl p-4 interactive max-w-sm mt-[80px] sm:mt-0">
+                <div class="text-slate-500 dark:text-gray-400 text-xs mb-2 uppercase tracking-wider font-bold">Circuit History</div>
+                <div id="circuit-history" class="flex flex-wrap gap-2 text-sm font-mono font-medium">
+                    <span class="text-slate-400 dark:text-gray-500 italic">No gates applied</span>
                 </div>
             </div>
         </div>
@@ -155,32 +199,32 @@
         <!-- Bottom Section: Controls -->
         <div class="flex flex-col items-center gap-4 mt-auto mb-4 interactive">
             <div class="glass-panel rounded-2xl p-4 flex flex-wrap gap-4 items-center justify-center">
-                <div class="text-gray-400 text-xs uppercase tracking-widest px-2 border-r border-gray-600">Fixed</div>
+                <div class="text-slate-400 dark:text-gray-400 font-bold text-xs uppercase tracking-widest px-2 border-r border-slate-300 dark:border-gray-600 transition-colors">Fixed</div>
                 
-                <button class="gate-btn" onclick="applyGate('X')" title="Pauli-X (NOT) Gate">X</button>
-                <button class="gate-btn" onclick="applyGate('Y')" title="Pauli-Y Gate">Y</button>
-                <button class="gate-btn" onclick="applyGate('Z')" title="Pauli-Z (Phase Flip) Gate">Z</button>
-                <div class="w-px h-8 bg-gray-600 mx-1"></div>
-                <button class="gate-btn border-purple-500/30 text-purple-400 hover:border-purple-400 hover:shadow-[0_0_15px_rgba(168,85,247,0.5)]" onclick="applyGate('H')" title="Hadamard Gate (Superposition)">H</button>
-                <button class="gate-btn border-emerald-500/30 text-emerald-400 hover:border-emerald-400 hover:shadow-[0_0_15px_rgba(16,185,129,0.5)]" onclick="applyGate('S')" title="Phase (S) Gate">S</button>
-                <button class="gate-btn border-emerald-500/30 text-emerald-400 hover:border-emerald-400 hover:shadow-[0_0_15px_rgba(16,185,129,0.5)]" onclick="applyGate('T')" title="π/8 (T) Gate">T</button>
+                <button class="gate-btn text-[#0284c7] dark:text-[#38bdf8] hover:border-[#7dd3fc] dark:hover:border-[#38bdf8] hover:shadow-[0_10px_15px_-3px_rgba(14,165,233,0.2)] dark:hover:shadow-[0_0_15px_rgba(56,189,248,0.5)]" onclick="applyGate('X')" title="Pauli-X (NOT) Gate">X</button>
+                <button class="gate-btn text-[#0284c7] dark:text-[#38bdf8] hover:border-[#7dd3fc] dark:hover:border-[#38bdf8] hover:shadow-[0_10px_15px_-3px_rgba(14,165,233,0.2)] dark:hover:shadow-[0_0_15px_rgba(56,189,248,0.5)]" onclick="applyGate('Y')" title="Pauli-Y Gate">Y</button>
+                <button class="gate-btn text-[#0284c7] dark:text-[#38bdf8] hover:border-[#7dd3fc] dark:hover:border-[#38bdf8] hover:shadow-[0_10px_15px_-3px_rgba(14,165,233,0.2)] dark:hover:shadow-[0_0_15px_rgba(56,189,248,0.5)]" onclick="applyGate('Z')" title="Pauli-Z (Phase Flip) Gate">Z</button>
+                <div class="w-px h-8 bg-slate-300 dark:bg-gray-600 mx-1 transition-colors"></div>
+                <button class="gate-btn text-purple-600 dark:text-purple-400 hover:text-purple-700 hover:border-purple-300 dark:hover:border-purple-400 hover:shadow-[0_10px_15px_-3px_rgba(168,85,247,0.2)] dark:hover:shadow-[0_0_15px_rgba(168,85,247,0.5)]" onclick="applyGate('H')" title="Hadamard Gate (Superposition)">H</button>
+                <button class="gate-btn text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 hover:border-emerald-300 dark:hover:border-emerald-400 hover:shadow-[0_10px_15px_-3px_rgba(16,185,129,0.2)] dark:hover:shadow-[0_0_15px_rgba(16,185,129,0.5)]" onclick="applyGate('S')" title="Phase (S) Gate">S</button>
+                <button class="gate-btn text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 hover:border-emerald-300 dark:hover:border-emerald-400 hover:shadow-[0_10px_15px_-3px_rgba(16,185,129,0.2)] dark:hover:shadow-[0_0_15px_rgba(16,185,129,0.5)]" onclick="applyGate('T')" title="π/8 (T) Gate">T</button>
                 
-                <div class="w-px h-8 bg-gray-600 mx-2"></div>
+                <div class="w-px h-8 bg-slate-300 dark:bg-gray-600 mx-2 transition-colors"></div>
                 
                 <!-- Parameterized Rotations -->
-                <div class="text-gray-400 text-xs uppercase tracking-widest px-2">Rotations</div>
-                <div class="flex items-center gap-2 bg-black/40 p-2 rounded-xl border border-white/10">
-                    <div class="flex items-center">
-                        <input type="number" id="rot-angle" value="90" class="w-12 bg-transparent text-white text-right font-mono outline-none border-b border-gray-500 focus:border-amber-400 transition-colors" title="Angle in degrees">
-                        <span class="text-gray-400 text-sm ml-1">°</span>
+                <div class="text-slate-400 dark:text-gray-400 font-bold text-xs uppercase tracking-widest px-2 transition-colors">Rotations</div>
+                <div class="flex items-center gap-2 bg-white/60 dark:bg-black/40 p-2 rounded-xl border border-white dark:border-white/10 shadow-inner transition-colors duration-300">
+                    <div class="flex items-center px-1">
+                        <input type="number" id="rot-angle" value="90" class="w-12 bg-transparent text-slate-800 dark:text-white text-right font-mono font-bold outline-none border-b border-slate-400 dark:border-gray-500 focus:border-amber-500 dark:focus:border-amber-400 transition-colors" title="Angle in degrees">
+                        <span class="text-slate-500 dark:text-gray-400 text-sm ml-1 font-bold">°</span>
                     </div>
-                    <button class="gate-btn w-10 h-10 text-sm border-amber-500/30 text-amber-400 hover:border-amber-400 hover:shadow-[0_0_15px_rgba(251,191,36,0.5)]" onclick="applyParamGate('Rx')" title="Rotate around X axis">Rx</button>
-                    <button class="gate-btn w-10 h-10 text-sm border-amber-500/30 text-amber-400 hover:border-amber-400 hover:shadow-[0_0_15px_rgba(251,191,36,0.5)]" onclick="applyParamGate('Ry')" title="Rotate around Y axis">Ry</button>
-                    <button class="gate-btn w-10 h-10 text-sm border-amber-500/30 text-amber-400 hover:border-amber-400 hover:shadow-[0_0_15px_rgba(251,191,36,0.5)]" onclick="applyParamGate('Rz')" title="Rotate around Z axis">Rz</button>
+                    <button class="gate-btn w-10 h-10 text-sm text-amber-600 dark:text-amber-400 hover:text-amber-700 hover:border-amber-300 dark:hover:border-amber-400 hover:shadow-[0_10px_15px_-3px_rgba(245,158,11,0.2)] dark:hover:shadow-[0_0_15px_rgba(251,191,36,0.5)]" onclick="applyParamGate('Rx')" title="Rotate around X axis">Rx</button>
+                    <button class="gate-btn w-10 h-10 text-sm text-amber-600 dark:text-amber-400 hover:text-amber-700 hover:border-amber-300 dark:hover:border-amber-400 hover:shadow-[0_10px_15px_-3px_rgba(245,158,11,0.2)] dark:hover:shadow-[0_0_15px_rgba(251,191,36,0.5)]" onclick="applyParamGate('Ry')" title="Rotate around Y axis">Ry</button>
+                    <button class="gate-btn w-10 h-10 text-sm text-amber-600 dark:text-amber-400 hover:text-amber-700 hover:border-amber-300 dark:hover:border-amber-400 hover:shadow-[0_10px_15px_-3px_rgba(245,158,11,0.2)] dark:hover:shadow-[0_0_15px_rgba(251,191,36,0.5)]" onclick="applyParamGate('Rz')" title="Rotate around Z axis">Rz</button>
                 </div>
             </div>
 
-            <button onclick="resetState()" class="px-6 py-2 rounded-full bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/40 transition-colors text-sm font-semibold tracking-wide uppercase cursor-pointer">
+            <button onclick="resetState()" class="px-6 py-2 rounded-full bg-white/80 dark:bg-red-500/20 text-red-500 dark:text-red-400 border border-red-200 dark:border-red-500/50 hover:bg-red-50 dark:hover:bg-red-500/40 hover:border-red-300 hover:text-red-600 shadow-sm transition-all text-sm font-bold tracking-wide uppercase cursor-pointer">
                 Reset to |0⟩
             </button>
         </div>
@@ -193,8 +237,8 @@
         <div id="lbl-1" class="label-3d">|1⟩</div>
         <div id="lbl-plus" class="label-3d">|+⟩</div>
         <div id="lbl-minus" class="label-3d">|-⟩</div>
-        <div id="lbl-i" class="label-3d text-emerald-400">|i⟩</div>
-        <div id="lbl-minusi" class="label-3d text-emerald-400">|-i⟩</div>
+        <div id="lbl-i" class="label-3d text-emerald-700 dark:text-emerald-400">|i⟩</div>
+        <div id="lbl-minusi" class="label-3d text-emerald-700 dark:text-emerald-400">|-i⟩</div>
 
         <!-- Coordinate Axis Labels -->
         <div id="lbl-axis-x" class="label-3d label-axis">X</div>
@@ -203,14 +247,16 @@
     </div>
 
     <script>
+        // --- Theme State ---
+        let isDarkMode = false; // Starts in Light mode
+        const mats = {}; // Stores all Three.js materials for easy theme swapping
+
         // --- Core Variables ---
         const RADIUS = 5;
         let scene, camera, renderer, controls;
         let arrowGroup, vectorTip;
-        let pathLine, pathGeometry;
-        let rotationAxisLine; // Represents the unitary axis of rotation
+        let pathLine, pathGeometry, rotationAxisLine;
         
-        // Math / Quantum State Variables
         let stateQuat; 
         let animationQueue = [];
         let isAnimating = false;
@@ -219,7 +265,6 @@
         let targetQuat;
         let gateHistoryList = [];
 
-        // Trace Path Variables
         const MAX_PATH_POINTS = 100;
         let pathPositions;
         let pathIndex = 0;
@@ -232,14 +277,69 @@
             
             init();
             animate();
+            applyThemeColors(); // Apply initial light theme colors to ThreeJS
         };
+
+        // --- Theme Toggle Logic ---
+        window.toggleTheme = function() {
+            isDarkMode = !isDarkMode;
+            const body = document.body;
+            const btn = document.getElementById('theme-btn');
+            
+            if (isDarkMode) {
+                body.classList.add('dark');
+                btn.innerText = '☀️';
+            } else {
+                body.classList.remove('dark');
+                btn.innerText = '🌙';
+            }
+            
+            applyThemeColors();
+            renderHistory(); // Re-render history UI tags to match theme colors
+        }
+
+        function applyThemeColors() {
+            if (!scene) return;
+            
+            if (isDarkMode) {
+                // Dark Theme ThreeJS Colors
+                scene.fog.color.setHex(0x050505);
+                mats.sphere.color.setHex(0x0088ff); mats.sphere.opacity = 0.1;
+                mats.core.color.setHex(0x001133); mats.core.opacity = 0.6;
+                mats.grid.color.setHex(0x445566); mats.grid.opacity = 0.8;
+                
+                mats.axisX.color.setHex(0x22aa44);
+                mats.axisY.color.setHex(0x4444aa);
+                mats.axisZ.color.setHex(0xaa2244);
+                
+                mats.vector.color.setHex(0x00ffff);
+                mats.vectorTip.color.setHex(0xffffff);
+                mats.path.color.setHex(0xffaa00);
+                mats.rotAxis.color.setHex(0xff00ff);
+            } else {
+                // Light Theme ThreeJS Colors
+                scene.fog.color.setHex(0xf8fafc);
+                mats.sphere.color.setHex(0x0284c7); mats.sphere.opacity = 0.15;
+                mats.core.color.setHex(0xffffff); mats.core.opacity = 0.3;
+                mats.grid.color.setHex(0x94a3b8); mats.grid.opacity = 0.6;
+                
+                mats.axisX.color.setHex(0x10b981); // Emerald
+                mats.axisY.color.setHex(0x3b82f6); // Blue
+                mats.axisZ.color.setHex(0xef4444); // Red
+                
+                mats.vector.color.setHex(0x4f46e5); // Indigo
+                mats.vectorTip.color.setHex(0x1e1b4b);
+                mats.path.color.setHex(0xf97316); // Orange
+                mats.rotAxis.color.setHex(0xa855f7); // Purple
+            }
+        }
 
         function init() {
             const container = document.getElementById('canvas-container');
             
             // Scene Setup
             scene = new THREE.Scene();
-            scene.fog = new THREE.FogExp2(0x050505, 0.02);
+            scene.fog = new THREE.FogExp2(0xf8fafc, 0.02);
 
             // Camera Setup
             const width = container.clientWidth;
@@ -269,83 +369,66 @@
         }
 
         function buildBlochSphere() {
-            const sphereGeo = new THREE.SphereGeometry(RADIUS, 32, 32);
-            const sphereMat = new THREE.MeshBasicMaterial({
-                color: 0x0088ff,
-                transparent: true,
-                opacity: 0.1,
-                wireframe: true
-            });
-            scene.add(new THREE.Mesh(sphereGeo, sphereMat));
+            // Main Sphere Surface
+            mats.sphere = new THREE.MeshBasicMaterial({ transparent: true, wireframe: true });
+            scene.add(new THREE.Mesh(new THREE.SphereGeometry(RADIUS, 32, 32), mats.sphere));
 
-            const coreMat = new THREE.MeshBasicMaterial({
-                color: 0x001133,
-                transparent: true,
-                opacity: 0.6,
-                depthWrite: false
-            });
-            scene.add(new THREE.Mesh(new THREE.SphereGeometry(RADIUS * 0.98, 32, 32), coreMat));
+            // Inner core
+            mats.core = new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false });
+            scene.add(new THREE.Mesh(new THREE.SphereGeometry(RADIUS * 0.98, 32, 32), mats.core));
 
-            const lineMat = new THREE.LineBasicMaterial({ color: 0x445566, transparent: true, opacity: 0.8 });
+            // Equators & Meridians
+            mats.grid = new THREE.LineBasicMaterial({ transparent: true });
             const createCircle = (axis) => {
                 const curve = new THREE.EllipseCurve(0, 0, RADIUS, RADIUS, 0, 2 * Math.PI, false, 0);
                 const points = curve.getPoints(64);
-                const geo = new THREE.BufferGeometry().setFromPoints(points);
-                const ellipse = new THREE.Line(geo, lineMat);
+                const ellipse = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), mats.grid);
                 if (axis === 'x') ellipse.rotation.y = Math.PI / 2;
                 if (axis === 'y') ellipse.rotation.x = Math.PI / 2;
                 return ellipse;
             };
-            scene.add(createCircle('x')); // YZ plane
-            scene.add(createCircle('y')); // XZ plane (equator)
-            scene.add(createCircle('z')); // XY plane
+            scene.add(createCircle('x')); 
+            scene.add(createCircle('y')); 
+            scene.add(createCircle('z')); 
 
-            // Coordinate Axes (Fixed structural lines)
-            const buildAxis = (vec, colorHex) => {
-                const mat = new THREE.LineBasicMaterial({ color: colorHex, opacity: 0.5, transparent: true });
+            // Coordinate Axes
+            const buildAxis = (vec, materialMapKey) => {
+                mats[materialMapKey] = new THREE.LineBasicMaterial({ opacity: 0.6, transparent: true });
                 const geo = new THREE.BufferGeometry().setFromPoints([
                     vec.clone().multiplyScalar(-RADIUS * 1.1),
                     vec.clone().multiplyScalar(RADIUS * 1.1)
                 ]);
-                scene.add(new THREE.Line(geo, mat));
+                scene.add(new THREE.Line(geo, mats[materialMapKey]));
             };
-            buildAxis(new THREE.Vector3(1, 0, 0), 0x22aa44); // Three X (Bloch Y)
-            buildAxis(new THREE.Vector3(0, 1, 0), 0x4444aa); // Three Y (Bloch Z)
-            buildAxis(new THREE.Vector3(0, 0, 1), 0xaa2244); // Three Z (Bloch X)
+            buildAxis(new THREE.Vector3(1, 0, 0), 'axisX'); // Three X (Bloch Y)
+            buildAxis(new THREE.Vector3(0, 1, 0), 'axisY'); // Three Y (Bloch Z)
+            buildAxis(new THREE.Vector3(0, 0, 1), 'axisZ'); // Three Z (Bloch X)
 
-            // Dynamic Unitary Rotation Axis Indicator (Magenta Dashed Line)
-            const rotAxisMat = new THREE.LineDashedMaterial({
-                color: 0xff00ff,
-                linewidth: 2,
-                dashSize: 0.4,
-                gapSize: 0.2,
-                transparent: true,
-                opacity: 0.9
+            // Dynamic Unitary Rotation Axis Indicator
+            mats.rotAxis = new THREE.LineDashedMaterial({
+                linewidth: 2, dashSize: 0.4, gapSize: 0.2, transparent: true, opacity: 0.9
             });
-            const rotAxisGeo = new THREE.BufferGeometry().setFromPoints([
-                new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,0)
-            ]);
-            rotationAxisLine = new THREE.Line(rotAxisGeo, rotAxisMat);
+            const rotAxisGeo = new THREE.BufferGeometry().setFromPoints([ new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,0) ]);
+            rotationAxisLine = new THREE.Line(rotAxisGeo, mats.rotAxis);
             rotationAxisLine.visible = false;
             scene.add(rotationAxisLine);
         }
 
         function buildQuantumStateVector() {
             arrowGroup = new THREE.Group();
-            const vecMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
             
-            const shaftGeo = new THREE.CylinderGeometry(0.04, 0.04, RADIUS, 16);
+            mats.vector = new THREE.MeshBasicMaterial(); 
+            
+            const shaftGeo = new THREE.CylinderGeometry(0.05, 0.05, RADIUS, 16);
             shaftGeo.translate(0, RADIUS / 2, 0); 
-            const shaft = new THREE.Mesh(shaftGeo, vecMat);
+            const shaft = new THREE.Mesh(shaftGeo, mats.vector);
             
-            const headGeo = new THREE.ConeGeometry(0.2, 0.6, 16);
-            headGeo.translate(0, RADIUS + 0.3, 0);
-            const head = new THREE.Mesh(headGeo, vecMat);
+            const headGeo = new THREE.ConeGeometry(0.25, 0.7, 16);
+            headGeo.translate(0, RADIUS + 0.35, 0);
+            const head = new THREE.Mesh(headGeo, mats.vector);
             
-            vectorTip = new THREE.Mesh(
-                new THREE.SphereGeometry(0.25, 16, 16),
-                new THREE.MeshBasicMaterial({ color: 0xffffff })
-            );
+            mats.vectorTip = new THREE.MeshBasicMaterial();
+            vectorTip = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 16), mats.vectorTip);
             vectorTip.position.set(0, RADIUS, 0);
             
             arrowGroup.add(shaft);
@@ -353,14 +436,11 @@
             arrowGroup.add(vectorTip);
             scene.add(arrowGroup);
 
+            // Path Trace
             pathGeometry = new THREE.BufferGeometry();
             pathGeometry.setAttribute('position', new THREE.BufferAttribute(pathPositions, 3));
-            pathLine = new THREE.Line(pathGeometry, new THREE.LineBasicMaterial({ 
-                color: 0xffaa00, 
-                linewidth: 2, 
-                transparent: true, 
-                opacity: 0.8 
-            }));
+            mats.path = new THREE.LineBasicMaterial({ linewidth: 3, transparent: true, opacity: 0.8 });
+            pathLine = new THREE.Line(pathGeometry, mats.path);
             scene.add(pathLine);
         }
 
@@ -379,48 +459,28 @@
             // Mapping: Three Z = Bloch X | Three X = Bloch Y | Three Y = Bloch Z
 
             switch(gateType) {
-                // Fixed Gates
                 case 'X': 
-                    rotAxis.set(0, 0, 1);
-                    qGate.setFromAxisAngle(rotAxis, Math.PI); 
-                    break;
+                    rotAxis.set(0, 0, 1); qGate.setFromAxisAngle(rotAxis, Math.PI); break;
                 case 'Y': 
-                    rotAxis.set(1, 0, 0);
-                    qGate.setFromAxisAngle(rotAxis, Math.PI); 
-                    break;
+                    rotAxis.set(1, 0, 0); qGate.setFromAxisAngle(rotAxis, Math.PI); break;
                 case 'Z': 
-                    rotAxis.set(0, 1, 0);
-                    qGate.setFromAxisAngle(rotAxis, Math.PI); 
-                    break;
+                    rotAxis.set(0, 1, 0); qGate.setFromAxisAngle(rotAxis, Math.PI); break;
                 case 'H': 
-                    rotAxis.set(0, sq2, sq2); // Rotates around (X+Z)/sqrt(2)
-                    qGate.setFromAxisAngle(rotAxis, Math.PI); 
-                    break;
+                    rotAxis.set(0, sq2, sq2); qGate.setFromAxisAngle(rotAxis, Math.PI); break;
                 case 'S': 
-                    rotAxis.set(0, 1, 0);
-                    qGate.setFromAxisAngle(rotAxis, Math.PI / 2); 
-                    break;
+                    rotAxis.set(0, 1, 0); qGate.setFromAxisAngle(rotAxis, Math.PI / 2); break;
                 case 'T': 
-                    rotAxis.set(0, 1, 0);
-                    qGate.setFromAxisAngle(rotAxis, Math.PI / 4); 
-                    break;
+                    rotAxis.set(0, 1, 0); qGate.setFromAxisAngle(rotAxis, Math.PI / 4); break;
                 
-                // Parameterized Rotations
                 case 'Rx': 
-                    rotAxis.set(0, 0, 1);
-                    qGate.setFromAxisAngle(rotAxis, angleDeg * Math.PI / 180); 
-                    displayStr = `Rx(${angleDeg}°)`;
-                    break;
+                    rotAxis.set(0, 0, 1); qGate.setFromAxisAngle(rotAxis, angleDeg * Math.PI / 180); 
+                    displayStr = `Rx(${angleDeg}°)`; break;
                 case 'Ry': 
-                    rotAxis.set(1, 0, 0);
-                    qGate.setFromAxisAngle(rotAxis, angleDeg * Math.PI / 180); 
-                    displayStr = `Ry(${angleDeg}°)`;
-                    break;
+                    rotAxis.set(1, 0, 0); qGate.setFromAxisAngle(rotAxis, angleDeg * Math.PI / 180); 
+                    displayStr = `Ry(${angleDeg}°)`; break;
                 case 'Rz': 
-                    rotAxis.set(0, 1, 0);
-                    qGate.setFromAxisAngle(rotAxis, angleDeg * Math.PI / 180); 
-                    displayStr = `Rz(${angleDeg}°)`;
-                    break;
+                    rotAxis.set(0, 1, 0); qGate.setFromAxisAngle(rotAxis, angleDeg * Math.PI / 180); 
+                    displayStr = `Rz(${angleDeg}°)`; break;
             }
 
             animationQueue.push({ type: displayStr, quaternion: qGate, axis: rotAxis });
@@ -448,21 +508,30 @@
         function renderHistory() {
             const container = document.getElementById('circuit-history');
             if (gateHistoryList.length === 0) {
-                container.innerHTML = '<span class="text-gray-500 italic">No gates applied</span>';
+                container.innerHTML = `<span class="text-slate-400 dark:text-gray-500 italic">No gates applied</span>`;
                 return;
             }
             
             let html = '';
             gateHistoryList.forEach((g, idx) => {
-                let colorClass = 'bg-slate-700 text-cyan-300 border-cyan-500/50';
+                // Determine color classes based on theme and gate type
+                let colorClass = isDarkMode 
+                    ? 'bg-slate-700 text-cyan-300 border-cyan-500/50' 
+                    : 'bg-white text-sky-700 border-sky-200 shadow-sm';
                 
-                if(g === 'H') colorClass = 'bg-purple-900/50 text-purple-300 border-purple-500/50';
-                else if(g === 'S' || g === 'T') colorClass = 'bg-emerald-900/50 text-emerald-300 border-emerald-500/50';
-                else if(g.startsWith('R')) colorClass = 'bg-amber-900/50 text-amber-300 border-amber-500/50';
+                if(g === 'H') colorClass = isDarkMode 
+                    ? 'bg-purple-900/50 text-purple-300 border-purple-500/50' 
+                    : 'bg-white text-purple-700 border-purple-200 shadow-sm';
+                else if(g === 'S' || g === 'T') colorClass = isDarkMode 
+                    ? 'bg-emerald-900/50 text-emerald-300 border-emerald-500/50' 
+                    : 'bg-white text-emerald-700 border-emerald-200 shadow-sm';
+                else if(g.startsWith('R')) colorClass = isDarkMode 
+                    ? 'bg-amber-900/50 text-amber-300 border-amber-500/50' 
+                    : 'bg-white text-amber-700 border-amber-200 shadow-sm';
                 
-                html += `<div class="px-2 py-1 rounded border ${colorClass} shadow-sm">${g}</div>`;
+                html += `<div class="px-2 py-1 rounded-md border ${colorClass}">${g}</div>`;
                 if(idx < gateHistoryList.length - 1) {
-                    html += `<div class="flex items-center text-gray-500">→</div>`;
+                    html += `<div class="flex items-center text-slate-300 dark:text-gray-500">→</div>`;
                 }
             });
             container.innerHTML = html;
@@ -499,20 +568,19 @@
                 let startV = new THREE.Vector3(0, RADIUS, 0).applyQuaternion(stateQuat);
                 appendToPath(startV);
 
-                // Show and align the Unitary Rotation Axis indicator
                 if (nextAnim.axis) {
                     const lineExt = RADIUS * 1.35;
                     rotationAxisLine.geometry.setFromPoints([
                         nextAnim.axis.clone().multiplyScalar(-lineExt),
                         nextAnim.axis.clone().multiplyScalar(lineExt)
                     ]);
-                    rotationAxisLine.computeLineDistances(); // Required for dashed lines
+                    rotationAxisLine.computeLineDistances(); 
                     rotationAxisLine.visible = true;
                 }
             }
 
             if (isAnimating) {
-                animProgress += 0.012; // Slightly slower to show off rotation axis
+                animProgress += 0.012; 
                 
                 let done = false;
                 if (animProgress >= 1.0) {
@@ -520,7 +588,6 @@
                     done = true;
                 }
 
-                // Smoothstep easing
                 let eased = animProgress * animProgress * (3 - 2 * animProgress);
                 
                 stateQuat.slerpQuaternions(startQuat, targetQuat, eased);
@@ -535,7 +602,7 @@
 
                 if (done) {
                     isAnimating = false;
-                    rotationAxisLine.visible = false; // Hide axis when done
+                    rotationAxisLine.visible = false; 
                 }
             }
 
@@ -588,7 +655,6 @@
             const axisOffset = RADIUS * 1.25;
             
             const positions = {
-                // Quantum States
                 'lbl-0': new THREE.Vector3(0, offset, 0),        
                 'lbl-1': new THREE.Vector3(0, -offset, 0),       
                 'lbl-plus': new THREE.Vector3(0, 0, offset),     
@@ -596,10 +662,9 @@
                 'lbl-i': new THREE.Vector3(offset, 0, 0),        
                 'lbl-minusi': new THREE.Vector3(-offset, 0, 0),
 
-                // Coordinate Axes (Slightly offset from states to prevent overlap)
-                'lbl-axis-x': new THREE.Vector3(0.3, 0, axisOffset), // Bloch X (Three Z)
-                'lbl-axis-y': new THREE.Vector3(axisOffset, 0.3, 0), // Bloch Y (Three X)
-                'lbl-axis-z': new THREE.Vector3(0.3, axisOffset, 0)  // Bloch Z (Three Y)
+                'lbl-axis-x': new THREE.Vector3(0.3, 0, axisOffset), 
+                'lbl-axis-y': new THREE.Vector3(axisOffset, 0.3, 0), 
+                'lbl-axis-z': new THREE.Vector3(0.3, axisOffset, 0)  
             };
             
             const container = document.getElementById('canvas-container');
