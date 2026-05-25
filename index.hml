@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Quantum Bloch Sphere</title>
+    
+    <!-- Tailwind CSS for UI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Three.js and OrbitControls -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Inter', sans-serif; }
+        #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
+        
+        /* UI Layer */
+        #ui-layer { position: absolute; z-index: 10; width: 100%; height: 100%; pointer-events: none; }
+        .interactive { pointer-events: auto; }
+        
+        /* 3D Labels */
+        .label-3d {
+            position: absolute;
+            color: white;
+            font-weight: bold;
+            font-size: 1.25rem;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.8), 0 0 20px rgba(0, 255, 255, 0.4);
+            transform: translate(-50%, -50%);
+            transition: opacity 0.2s;
+            user-select: none;
+            pointer-events: none;
+        }
+
+        /* Glassmorphism Panels */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Gate Buttons */
+        .gate-btn {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #38bdf8;
+            font-weight: 600;
+            width: 3.5rem;
+            height: 3.5rem;
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+        .gate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.5);
+            border-color: #38bdf8;
+            color: white;
+            cursor: pointer;
+        }
+        .gate-btn:active { transform: translateY(1px); }
+        
+        /* Parametric Inputs */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+    </style>
+</head>
+<body class="text-white selection:bg-cyan-900">
+
+    <!-- 3D Canvas -->
+    <div id="canvas-container"></div>
+
+    <!-- UI Overlay -->
+    <div id="ui-layer" class="flex flex-col justify-between p-6">
+        
+        <!-- Top Section: Math Readout & Title -->
+        <div class="flex justify-between items-start w-full">
+            <div class="glass-panel rounded-2xl p-6 w-80 interactive">
+                <h1 class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 mb-4">
+                    Quantum Bloch Sphere
+                </h1>
+                
+                <div class="space-y-3 font-mono text-sm">
+                    <div class="bg-black/40 p-3 rounded-lg border border-white/5">
+                        <div class="text-gray-400 text-xs mb-1">State Vector |ψ⟩</div>
+                        <div id="readout-psi" class="text-cyan-300 font-semibold tracking-wide">1.000 |0⟩ + 0.000 |1⟩</div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="bg-black/40 p-2 rounded-lg border border-white/5">
+                            <div class="text-gray-400 text-xs">α (Amplitude 0)</div>
+                            <div id="readout-alpha">1.000</div>
+                        </div>
+                        <div class="bg-black/40 p-2 rounded-lg border border-white/5">
+                            <div class="text-gray-400 text-xs">β (Amplitude 1)</div>
+                            <div id="readout-beta">0.000</div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between bg-black/40 p-2 rounded-lg border border-white/5 text-gray-300">
+                        <div>θ: <span id="readout-theta" class="text-white">0.0°</span></div>
+                        <div>φ: <span id="readout-phi" class="text-white">0.0°</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gate History -->
+            <div class="glass-panel rounded-xl p-4 interactive max-w-sm">
+                <div class="text-gray-400 text-xs mb-2 uppercase tracking-wider font-semibold">Circuit History</div>
+                <div id="circuit-history" class="flex flex-wrap gap-2 text-sm font-mono">
+                    <span class="text-gray-500 italic">No gates applied</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Section: Controls -->
+        <div class="flex flex-col items-center gap-4 mt-auto mb-4 interactive">
+            <div class="glass-panel rounded-2xl p-4 flex flex-wrap gap-4 items-center justify-center">
+                <div class="text-gray-400 text-xs uppercase tracking-widest px-2 border-r border-gray-600">Fixed</div>
+                
+                <button class="gate-btn" onclick="applyGate('X')" title="Pauli-X (NOT) Gate">X</button>
+                <button class="gate-btn" onclick="applyGate('Y')" title="Pauli-Y Gate">Y</button>
+                <button class="gate-btn" onclick="applyGate('Z')" title="Pauli-Z (Phase Flip) Gate">Z</button>
+                <div class="w-px h-8 bg-gray-600 mx-1"></div>
+                <button class="gate-btn border-purple-500/30 text-purple-400 hover:border-purple-400 hover:shadow-[0_0_15px_rgba(168,85,247,0.5)]" onclick="applyGate('H')" title="Hadamard Gate (Superposition)">H</button>
+                <button class="gate-btn border-emerald-500/30 text-emerald-400 hover:border-emerald-400 hover:shadow-[0_0_15px_rgba(16,185,129,0.5)]" onclick="applyGate('S')" title="Phase (S) Gate">S</button>
+                <button class="gate-btn border-emerald-500/30 text-emerald-400 hover:border-emerald-400 hover:shadow-[0_0_15px_rgba(16,185,129,0.5)]" onclick="applyGate('T')" title="π/8 (T) Gate">T</button>
+                
+                <div class="w-px h-8 bg-gray-600 mx-2"></div>
+                
+                <!-- Parameterized Rotations -->
+                <div class="text-gray-400 text-xs uppercase tracking-widest px-2">Rotations</div>
+                <div class="flex items-center gap-2 bg-black/40 p-2 rounded-xl border border-white/10">
+                    <div class="flex items-center">
+                        <input type="number" id="rot-angle" value="90" class="w-12 bg-transparent text-white text-right font-mono outline-none border-b border-gray-500 focus:border-amber-400 transition-colors" title="Angle in degrees">
+                        <span class="text-gray-400 text-sm ml-1">°</span>
+                    </div>
+                    <button class="gate-btn w-10 h-10 text-sm border-amber-500/30 text-amber-400 hover:border-amber-400 hover:shadow-[0_0_15px_rgba(251,191,36,0.5)]" onclick="applyParamGate('Rx')" title="Rotate around X axis">Rx</button>
+                    <button class="gate-btn w-10 h-10 text-sm border-amber-500/30 text-amber-400 hover:border-amber-400 hover:shadow-[0_0_15px_rgba(251,191,36,0.5)]" onclick="applyParamGate('Ry')" title="Rotate around Y axis">Ry</button>
+                    <button class="gate-btn w-10 h-10 text-sm border-amber-500/30 text-amber-400 hover:border-amber-400 hover:shadow-[0_0_15px_rgba(251,191,36,0.5)]" onclick="applyParamGate('Rz')" title="Rotate around Z axis">Rz</button>
+                </div>
+            </div>
+
+            <button onclick="resetState()" class="px-6 py-2 rounded-full bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/40 transition-colors text-sm font-semibold tracking-wide uppercase cursor-pointer">
+                Reset to |0⟩
+            </button>
+        </div>
+    </div>
+
+    <!-- 3D Spatial Labels -->
+    <div id="labels-container" class="absolute inset-0 pointer-events-none z-0">
+        <div id="lbl-0" class="label-3d">|0⟩</div>
+        <div id="lbl-1" class="label-3d">|1⟩</div>
+        <div id="lbl-plus" class="label-3d">|+⟩</div>
+        <div id="lbl-minus" class="label-3d">|-⟩</div>
+        <div id="lbl-i" class="label-3d text-emerald-400">|i⟩</div>
+        <div id="lbl-minusi" class="label-3d text-emerald-400">|-i⟩</div>
+    </div>
+
+    <script>
+        // --- Core Variables ---
+        const RADIUS = 5;
+        let scene, camera, renderer, controls;
+        let arrowGroup, vectorTip;
+        let pathLine, pathGeometry;
+        
+        // Math / Quantum State Variables
+        let stateQuat; 
+        let animationQueue = [];
+        let isAnimating = false;
+        let animProgress = 0;
+        let startQuat;
+        let targetQuat;
+        let gateHistoryList = [];
+
+        // Trace Path Variables
+        const MAX_PATH_POINTS = 100;
+        let pathPositions;
+        let pathIndex = 0;
+
+        window.onload = function () {
+            stateQuat = new THREE.Quaternion();
+            startQuat = new THREE.Quaternion();
+            targetQuat = new THREE.Quaternion();
+            pathPositions = new Float32Array(MAX_PATH_POINTS * 3);
+            
+            init();
+            animate();
+        };
+
+        function init() {
+            const container = document.getElementById('canvas-container');
+            
+            // Scene Setup
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x050505, 0.02);
+
+            // Camera Setup
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.set(10, 8, 12);
+            
+            // Renderer Setup
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            // Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.enablePan = false;
+            controls.minDistance = 8;
+            controls.maxDistance = 25;
+
+            buildBlochSphere();
+            buildQuantumStateVector();
+
+            window.addEventListener('resize', onWindowResize);
+            updateStateReadout();
+        }
+
+        function buildBlochSphere() {
+            const sphereGeo = new THREE.SphereGeometry(RADIUS, 32, 32);
+            const sphereMat = new THREE.MeshBasicMaterial({
+                color: 0x0088ff,
+                transparent: true,
+                opacity: 0.1,
+                wireframe: true
+            });
+            scene.add(new THREE.Mesh(sphereGeo, sphereMat));
+
+            const coreMat = new THREE.MeshBasicMaterial({
+                color: 0x001133,
+                transparent: true,
+                opacity: 0.6,
+                depthWrite: false
+            });
+            scene.add(new THREE.Mesh(new THREE.SphereGeometry(RADIUS * 0.98, 32, 32), coreMat));
+
+            const lineMat = new THREE.LineBasicMaterial({ color: 0x445566, transparent: true, opacity: 0.8 });
+            const createCircle = (axis) => {
+                const curve = new THREE.EllipseCurve(0, 0, RADIUS, RADIUS, 0, 2 * Math.PI, false, 0);
+                const points = curve.getPoints(64);
+                const geo = new THREE.BufferGeometry().setFromPoints(points);
+                const ellipse = new THREE.Line(geo, lineMat);
+                if (axis === 'x') ellipse.rotation.y = Math.PI / 2;
+                if (axis === 'y') ellipse.rotation.x = Math.PI / 2;
+                return ellipse;
+            };
+            scene.add(createCircle('x')); // YZ plane
+            scene.add(createCircle('y')); // XZ plane (equator)
+            scene.add(createCircle('z')); // XY plane
+
+            // Axes
+            const buildAxis = (vec, colorHex) => {
+                const mat = new THREE.LineBasicMaterial({ color: colorHex, opacity: 0.5, transparent: true });
+                const geo = new THREE.BufferGeometry().setFromPoints([
+                    vec.clone().multiplyScalar(-RADIUS * 1.1),
+                    vec.clone().multiplyScalar(RADIUS * 1.1)
+                ]);
+                scene.add(new THREE.Line(geo, mat));
+            };
+            buildAxis(new THREE.Vector3(1, 0, 0), 0x22aa44); // Three X (Bloch Y)
+            buildAxis(new THREE.Vector3(0, 1, 0), 0x4444aa); // Three Y (Bloch Z)
+            buildAxis(new THREE.Vector3(0, 0, 1), 0xaa2244); // Three Z (Bloch X)
+        }
+
+        function buildQuantumStateVector() {
+            arrowGroup = new THREE.Group();
+            const vecMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+            
+            const shaftGeo = new THREE.CylinderGeometry(0.04, 0.04, RADIUS, 16);
+            shaftGeo.translate(0, RADIUS / 2, 0); 
+            const shaft = new THREE.Mesh(shaftGeo, vecMat);
+            
+            const headGeo = new THREE.ConeGeometry(0.2, 0.6, 16);
+            headGeo.translate(0, RADIUS + 0.3, 0);
+            const head = new THREE.Mesh(headGeo, vecMat);
+            
+            vectorTip = new THREE.Mesh(
+                new THREE.SphereGeometry(0.25, 16, 16),
+                new THREE.MeshBasicMaterial({ color: 0xffffff })
+            );
+            vectorTip.position.set(0, RADIUS, 0);
+            
+            arrowGroup.add(shaft);
+            arrowGroup.add(head);
+            arrowGroup.add(vectorTip);
+            scene.add(arrowGroup);
+
+            pathGeometry = new THREE.BufferGeometry();
+            pathGeometry.setAttribute('position', new THREE.BufferAttribute(pathPositions, 3));
+            pathLine = new THREE.Line(pathGeometry, new THREE.LineBasicMaterial({ 
+                color: 0xffaa00, 
+                linewidth: 2, 
+                transparent: true, 
+                opacity: 0.8 
+            }));
+            scene.add(pathLine);
+        }
+
+        window.applyParamGate = function(gateType) {
+            const angleInput = document.getElementById('rot-angle').value;
+            const angleDeg = parseFloat(angleInput) || 0;
+            applyGate(gateType, angleDeg);
+        }
+
+        window.applyGate = function(gateType, angleDeg = null) {
+            let qGate = new THREE.Quaternion();
+            const sq2 = 1 / Math.SQRT2;
+            let displayStr = gateType;
+
+            // Mapping: Three X = Bloch Y | Three Y = Bloch Z | Three Z = Bloch X
+
+            switch(gateType) {
+                // Fixed Gates
+                case 'X': qGate.setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI); break;
+                case 'Y': qGate.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI); break;
+                case 'Z': qGate.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI); break;
+                case 'H': qGate.setFromAxisAngle(new THREE.Vector3(0, sq2, sq2), Math.PI); break;
+                case 'S': qGate.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2); break;
+                case 'T': qGate.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 4); break;
+                
+                // Parameterized Rotations
+                case 'Rx': 
+                    qGate.setFromAxisAngle(new THREE.Vector3(0, 0, 1), angleDeg * Math.PI / 180); 
+                    displayStr = `Rx(${angleDeg}°)`;
+                    break;
+                case 'Ry': 
+                    qGate.setFromAxisAngle(new THREE.Vector3(1, 0, 0), angleDeg * Math.PI / 180); 
+                    displayStr = `Ry(${angleDeg}°)`;
+                    break;
+                case 'Rz': 
+                    qGate.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angleDeg * Math.PI / 180); 
+                    displayStr = `Rz(${angleDeg}°)`;
+                    break;
+            }
+
+            animationQueue.push({ type: displayStr, quaternion: qGate });
+            addToHistory(displayStr);
+        }
+
+        window.resetState = function() {
+            animationQueue = []; 
+            stateQuat.identity();
+            arrowGroup.quaternion.copy(stateQuat);
+            clearPath();
+            gateHistoryList = [];
+            renderHistory();
+            updateStateReadout();
+            isAnimating = false;
+        }
+
+        function addToHistory(gateStr) {
+            gateHistoryList.push(gateStr);
+            if(gateHistoryList.length > 8) gateHistoryList.shift();
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('circuit-history');
+            if (gateHistoryList.length === 0) {
+                container.innerHTML = '<span class="text-gray-500 italic">No gates applied</span>';
+                return;
+            }
+            
+            let html = '';
+            gateHistoryList.forEach((g, idx) => {
+                let colorClass = 'bg-slate-700 text-cyan-300 border-cyan-500/50';
+                
+                if(g === 'H') colorClass = 'bg-purple-900/50 text-purple-300 border-purple-500/50';
+                else if(g === 'S' || g === 'T') colorClass = 'bg-emerald-900/50 text-emerald-300 border-emerald-500/50';
+                else if(g.startsWith('R')) colorClass = 'bg-amber-900/50 text-amber-300 border-amber-500/50';
+                
+                html += `<div class="px-2 py-1 rounded border ${colorClass} shadow-sm">${g}</div>`;
+                if(idx < gateHistoryList.length - 1) {
+                    html += `<div class="flex items-center text-gray-500">→</div>`;
+                }
+            });
+            container.innerHTML = html;
+        }
+
+        function clearPath() {
+            pathIndex = 0;
+            pathGeometry.setDrawRange(0, 0);
+        }
+
+        function appendToPath(vec) {
+            if (pathIndex >= MAX_PATH_POINTS) return; 
+            pathPositions[pathIndex * 3] = vec.x;
+            pathPositions[pathIndex * 3 + 1] = vec.y;
+            pathPositions[pathIndex * 3 + 2] = vec.z;
+            pathIndex++;
+            pathGeometry.setDrawRange(0, pathIndex);
+            pathGeometry.attributes.position.needsUpdate = true;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (!isAnimating && animationQueue.length > 0) {
+                let nextAnim = animationQueue.shift();
+                
+                startQuat.copy(stateQuat);
+                targetQuat.copy(stateQuat).premultiply(nextAnim.quaternion);
+                
+                isAnimating = true;
+                animProgress = 0;
+                clearPath();
+
+                let startV = new THREE.Vector3(0, RADIUS, 0).applyQuaternion(stateQuat);
+                appendToPath(startV);
+            }
+
+            if (isAnimating) {
+                animProgress += 0.015; 
+                
+                let done = false;
+                if (animProgress >= 1.0) {
+                    animProgress = 1.0;
+                    done = true;
+                }
+
+                // Smoothstep easing
+                let eased = animProgress * animProgress * (3 - 2 * animProgress);
+                
+                stateQuat.slerpQuaternions(startQuat, targetQuat, eased);
+                arrowGroup.quaternion.copy(stateQuat);
+
+                let currentV = new THREE.Vector3(0, RADIUS, 0).applyQuaternion(stateQuat);
+                if (pathIndex < MAX_PATH_POINTS) {
+                    appendToPath(currentV);
+                }
+
+                updateStateReadout();
+
+                if (done) isAnimating = false;
+            }
+
+            controls.update();
+            updateLabels();
+            renderer.render(scene, camera);
+        }
+
+        function updateStateReadout() {
+            let v = new THREE.Vector3(0, 1, 0).applyQuaternion(stateQuat);
+            
+            let bx = v.z; 
+            let by = v.x; 
+            let bz = v.y; 
+
+            bz = Math.max(-1, Math.min(1, bz));
+            
+            let theta = Math.acos(bz);
+            let phi = Math.atan2(by, bx);
+            if (phi < 0) phi += 2 * Math.PI;
+            if (Math.abs(bz) > 0.9999) phi = 0;
+
+            let alpha = Math.cos(theta / 2);
+            let betaMag = Math.sin(theta / 2);
+            let betaReal = betaMag * Math.cos(phi);
+            let betaImag = betaMag * Math.sin(phi);
+
+            const fmt = (num) => (Math.abs(num) < 0.001 ? "0.000" : num.toFixed(3));
+            
+            document.getElementById('readout-theta').innerText = (theta * 180 / Math.PI).toFixed(1) + '°';
+            document.getElementById('readout-phi').innerText = (phi * 180 / Math.PI).toFixed(1) + '°';
+            
+            document.getElementById('readout-alpha').innerText = fmt(alpha);
+            
+            let sign = betaImag >= 0 ? '+' : '-';
+            let bStr = `${fmt(betaReal)} ${sign} ${fmt(Math.abs(betaImag))}i`;
+            document.getElementById('readout-beta').innerText = bStr;
+
+            let eq = `${fmt(alpha)} |0⟩ `;
+            if (Math.abs(betaMag) > 0.001) {
+                eq += `+ (${bStr}) |1⟩`;
+            } else {
+                eq += `+ 0.000 |1⟩`;
+            }
+            document.getElementById('readout-psi').innerText = eq;
+        }
+
+        function updateLabels() {
+            const offset = RADIUS * 1.15;
+            
+            const positions = {
+                'lbl-0': new THREE.Vector3(0, offset, 0),        
+                'lbl-1': new THREE.Vector3(0, -offset, 0),       
+                'lbl-plus': new THREE.Vector3(0, 0, offset),     
+                'lbl-minus': new THREE.Vector3(0, 0, -offset),   
+                'lbl-i': new THREE.Vector3(offset, 0, 0),        
+                'lbl-minusi': new THREE.Vector3(-offset, 0, 0)   
+            };
+
+            for (let id in positions) {
+                let vec = positions[id].clone();
+                vec.project(camera);
+
+                let el = document.getElementById(id);
+                if (vec.z > 1) {
+                    el.style.opacity = '0';
+                } else {
+                    el.style.opacity = '1';
+                    let x = (vec.x * 0.5 + 0.5) * window.innerWidth;
+                    let y = -(vec.y * 0.5 - 0.5) * window.innerHeight;
+                    el.style.left = `${x}px`;
+                    el.style.top = `${y}px`;
+                }
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+    </script>
+</body>
+</html>
+
+
+```
